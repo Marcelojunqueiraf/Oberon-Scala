@@ -3,6 +3,9 @@ package br.unb.cic.oberon.parser
 import br.unb.cic.oberon.AbstractTestSuite
 import br.unb.cic.oberon.ast._
 import org.scalatest.funsuite.AnyFunSuite
+import org.scalactic.TolerantNumerics
+
+import java.nio.file.{Files, Paths}
 
 import scala.collection.mutable.Map
 
@@ -991,5 +994,1080 @@ test("Testing the oberon stmt26 code. This module has a ForRange stmt") {
     assert(AssignmentStmt("y", AddExpression(VarExpression("y"), IntValue(1))) == stmt2(1))
 
   }
+
+test("Testing the oberon stmt29 code. This module has a ForRange with a procedure") {
+    val module = parseResource("stmts/stmt29.oberon")
+
+    assert("ForRangeModule" == module.name)
+    assert(1 == module.variables.length)
+
+    assert(None != module.stmt.getOrElse(None))
+    val forStmt = module.stmt.get.asInstanceOf[ForStmt]
+
+    val initStmt = AssignmentStmt("x", IntValue(0))
+    val condExpr = LTEExpression(VarExpression("x"), IntValue(10))
+    val stmts = forStmt.stmt.asInstanceOf[SequenceStmt].stmts
+
+    assert(initStmt == forStmt.init)
+    assert(condExpr == forStmt.condition)
+    assert(WriteStmt(FunctionCallExpression("squareOf", List(VarExpression("x")))) == stmts(0))
+    assert(AssignmentStmt("x", AddExpression(VarExpression("x"), IntValue(1))) == stmts(1))
+  }
+
+  test("Testing the oberon stmt30 code. This module has IF-ELSIF statement") {
+    val module = parseResource("stmts/stmt30.oberon")
+
+    assert(module.name == "SimpleModule")
+
+    assert(module.stmt.isDefined)
+
+    // assert that the main block contains a sequence of statements
+    module.stmt.get match {
+      case SequenceStmt(stmts) => assert(stmts.length == 3)
+      case _ => fail("we are expecting three stmts in the main block")
+    }
+
+    // now we can assume that the main block contains a sequence of stmts
+    val sequence = module.stmt.get.asInstanceOf[SequenceStmt]
+    val stmts = sequence.stmts
+
+    assert(stmts.head == ReadIntStmt("x"))
+
+    stmts(1) match {
+      case IfElseIfStmt(cond, thenStmt, elseIfs, elseStmt) =>
+        assert(cond == LTExpression(VarExpression("x"), IntValue(5)))
+        assert(thenStmt == AssignmentStmt("y", IntValue(1)))
+        assert(elseIfs(0).condition == LTExpression(VarExpression("x"), IntValue(7)))
+        assert(elseIfs(0).thenStmt == AssignmentStmt("y", IntValue(2)))
+        assert(elseIfs(1).condition == LTExpression(VarExpression("x"), IntValue(9)))
+        assert(elseIfs(1).thenStmt == AssignmentStmt("y", IntValue(3)))
+        assert(elseStmt.contains(AssignmentStmt("y", IntValue(4))))
+      case _ => fail("expecting an if-then stmt")
+    }
+
+    assert(stmts(2) == WriteStmt(VarExpression("y")))
+  }
+
+  test("Testing the oberon IfElseIfStmt09 code. This module has IF-ELSIF statement without ELSE stmt") {
+    val module = parseResource("stmts/IfElseIfStmt09.oberon")
+
+    assert(module.name == "SimpleModule")
+
+    assert(module.stmt.isDefined)
+
+    // assert that the main block contains a sequence of statements
+    module.stmt.get match {
+      case SequenceStmt(stmts) => assert(stmts.length == 3)
+      case _ => fail("we are expecting three stmts in the main block")
+    }
+
+    // now we can assume that the main block contains a sequence of stmts
+    val sequence = module.stmt.get.asInstanceOf[SequenceStmt]
+    val stmts = sequence.stmts
+
+    assert(stmts.head == ReadIntStmt("x"))
+
+    stmts(1) match {
+      case IfElseIfStmt(cond, thenStmt, elseIfs, elseStmt) =>
+        assert(cond == GTExpression(VarExpression("x"), IntValue(1)))
+        assert(thenStmt == AssignmentStmt("y", IntValue(0)))
+        assert(elseIfs(0).condition == LTExpression(VarExpression("x"), IntValue(3)))
+        assert(elseIfs(0).thenStmt == AssignmentStmt("y", IntValue(2)))
+        assert(elseStmt == None)
+      case _ => fail("expecting an if-then stmt")
+    }
+
+    assert(stmts(2) == WriteStmt(VarExpression("y")))
+  }
+
+  test("Testing the oberon IfElseIfStmt10 code. This module has IF-ELSIF statement with ten ELSEIF stmts") {
+    val module = parseResource("stmts/IfElseIfStmt10.oberon")
+
+    assert(module.name == "SimpleModule")
+
+    assert(module.stmt.isDefined)
+
+    // assert that the main block contains a sequence of statements
+    module.stmt.get match {
+      case SequenceStmt(stmts) => assert(stmts.length == 3)
+      case _ => fail("we are expecting three stmts in the main block")
+    }
+
+    // now we can assume that the main block contains a sequence of stmts
+    val sequence = module.stmt.get.asInstanceOf[SequenceStmt]
+    val stmts = sequence.stmts
+
+    assert(stmts.head == ReadIntStmt("x"))
+
+    stmts(1) match {
+      case IfElseIfStmt(cond, thenStmt, elseIfs, elseStmt) =>
+        assert(cond == LTExpression(VarExpression("x"), IntValue(5)))
+        assert(thenStmt == AssignmentStmt("y", IntValue(1)))
+        assert(elseIfs(0).condition == LTExpression(VarExpression("x"), IntValue(7)))
+        assert(elseIfs(0).thenStmt == AssignmentStmt("y", IntValue(2)))
+        assert(elseIfs(1).condition == LTExpression(VarExpression("x"), IntValue(9)))
+        assert(elseIfs(1).thenStmt == AssignmentStmt("y", IntValue(3)))
+        assert(elseIfs(2).condition == LTExpression(VarExpression("x"), IntValue(11)))
+        assert(elseIfs(2).thenStmt == AssignmentStmt("y", IntValue(4)))
+        assert(elseIfs(3).condition == LTExpression(VarExpression("x"), IntValue(13)))
+        assert(elseIfs(3).thenStmt == AssignmentStmt("y", IntValue(5)))
+        assert(elseIfs(4).condition == LTExpression(VarExpression("x"), IntValue(15)))
+        assert(elseIfs(4).thenStmt == AssignmentStmt("y", IntValue(6)))
+        assert(elseIfs(5).condition == LTExpression(VarExpression("x"), IntValue(17)))
+        assert(elseIfs(5).thenStmt == AssignmentStmt("y", IntValue(7)))
+        assert(elseIfs(6).condition == LTExpression(VarExpression("x"), IntValue(19)))
+        assert(elseIfs(6).thenStmt == AssignmentStmt("y", IntValue(8)))
+        assert(elseIfs(7).condition == LTExpression(VarExpression("x"), IntValue(21)))
+        assert(elseIfs(7).thenStmt == AssignmentStmt("y", IntValue(9)))
+        assert(elseIfs(8).condition == LTExpression(VarExpression("x"), IntValue(23)))
+        assert(elseIfs(8).thenStmt == AssignmentStmt("y", IntValue(10)))
+        assert(elseIfs(9).condition == EQExpression(VarExpression("x"), IntValue(25)))
+        assert(elseIfs(9).thenStmt == AssignmentStmt("y", IntValue(11)))
+        assert(elseStmt == Some(AssignmentStmt("y", IntValue(12))))
+      case _ => fail("expecting an if-then stmt")
+    }
+
+    assert(stmts(2) == WriteStmt(VarExpression("y")))
+  }
+
+
+  test("Testing the oberon procedure01 code. This module has a procedure") {
+    val module = parseResource("procedures/procedure01.oberon")
+
+    assert(module.name == "SimpleModule")
+
+    assert(module.procedures.size == 1)
+    assert(module.stmt.isDefined)
+
+    val procedure = module.procedures.head
+
+    assert(procedure.name == "sum")
+    assert(procedure.args.size == 2)
+    assert(procedure.returnType == Some(IntegerType))
+
+    procedure.stmt match {
+      case ReturnStmt(AddExpression(VarExpression("v1"), VarExpression("v2"))) => succeed
+      case _ => fail("expecting a return stmt")
+    }
+
+    assert(module.stmt.get.isInstanceOf[SequenceStmt])
+
+    val stmt = module.stmt.get.asInstanceOf[SequenceStmt]
+
+    assert(stmt.stmts.head == ReadIntStmt("x"))
+    assert(stmt.stmts(1) == ReadIntStmt("y"))
+    assert(stmt.stmts(2) == WriteStmt(FunctionCallExpression("sum", List(VarExpression("x"), VarExpression("y")))))
+  }
+
+  test("Testing the oberon procedure02 code. This module resembles the code of the LDTA challenge") {
+    val module = parseResource("procedures/procedure02.oberon")
+
+    assert(module.name == "Multiples")
+
+    assert(module.procedures.size == 1)
+    assert(module.stmt.isDefined)
+
+    val procedure = module.procedures.head
+
+    assert(procedure.name == "calcmult")
+    assert(procedure.args.size == 2)
+    assert(procedure.returnType == Some(IntegerType))
+
+    procedure.stmt match {
+      case ReturnStmt(MultExpression(VarExpression("i"), VarExpression("base"))) => succeed
+      case _ => fail("expecting a return i * base stmt")
+    }
+
+    assert(module.stmt.get.isInstanceOf[SequenceStmt])
+
+    val stmt = module.stmt.get.asInstanceOf[SequenceStmt]
+
+    assert(stmt.stmts.head == ReadIntStmt("base"))
+  }
+
+  test("Testing the oberon procedure03 code. This module implements a fatorial function") {
+    val module = parseResource("procedures/procedure03.oberon")
+
+    assert(module.name == "Factorial")
+
+    assert(module.procedures.size == 1)
+    assert(module.stmt.isDefined)
+
+    val procedure = module.procedures.head
+
+    assert(procedure.name == "factorial")
+    assert(procedure.args.size == 1)
+    assert(procedure.returnType == Some(IntegerType))
+
+    procedure.stmt match {
+      case SequenceStmt(_) => succeed
+      case _ => fail("expecting a sequence of stmts")
+    }
+
+    val SequenceStmt(stmts) = procedure.stmt // pattern matching...
+    assert(stmts.size == 2)
+
+    assert(stmts.head == IfElseStmt(EQExpression(VarExpression("i"), IntValue(1)), ReturnStmt(IntValue(1)), None))
+    assert(stmts(1) == ReturnStmt(MultExpression(VarExpression("i"), FunctionCallExpression("factorial", List(SubExpression(VarExpression("i"), IntValue(1)))))))
+
+    module.stmt.get match {
+      case SequenceStmt(ss) => {
+        assert(ss.head == AssignmentStmt("res", FunctionCallExpression("factorial", List(IntValue(5)))))
+        assert(ss(1) == WriteStmt(VarExpression("res")))
+      }
+      case _ => fail("expecting a sequence of stmts: an assignment and a print stmt (Write)")
+    }
+  }
+
+  test("Testing the oberon stmt31 module. This module has a RepeatUntil") {
+    val module = parseResource("stmts/stmt31.oberon")
+
+    assert(module.name == "SimpleModule")
+
+    assert(module.stmt.isDefined && module.stmt.get.isInstanceOf[SequenceStmt])
+
+    val stmt = module.stmt.get.asInstanceOf[SequenceStmt]
+
+    assert(stmt.stmts.size == 4)
+
+    assert(stmt.stmts(2).isInstanceOf[RepeatUntilStmt])
+  }
+//  test("Testing the oberon procedure05 code. This module resembles the code of multiples to test parameters.") {
+//    val module = parseResource("procedures/procedure05.oberon")
+//
+//    assert(module.name == "Multiply_Ref")
+//
+//    assert(module.procedures.size == 1)
+//    assert(module.stmt.isDefined)
+//
+//    val procedure = module.procedures.head
+//
+//    assert(procedure.name == "mult")
+//    assert(procedure.args.size == 3)
+//      assert(procedure.returnType == None)
+//
+//    procedure.stmt match {
+//      case AssignmentStmt("res", MultExpression(VarExpression("i"), VarExpression("a"))) => succeed
+//      case _ => fail("expecting a res = i * a stmt")
+//    }
+//
+//    assert(module.stmt.get.isInstanceOf[SequenceStmt])
+//
+//    val stmt = module.stmt.get.asInstanceOf[SequenceStmt]
+//
+//    assert(stmt.stmts.head == ReadIntStmt("a"))
+//    assert(stmt.stmts(1) == ReadIntStmt("b"))
+//  }
+
+
+  test("Testing the oberon ArrayAssignmentStmt01 code. This module has a simple array assignment") {
+    val module = parseResource("stmts/ArrayAssignmentStmt01.oberon")
+
+    assert(module.name == "SimpleModule")
+
+    assert(module.stmt.isDefined)
+
+    // assert that the main block contains a sequence of statements
+    module.stmt.get match {
+      case SequenceStmt(stmts) => assert(stmts.length == 2)
+      case _ => fail("we are expecting two stmts in the main block")
+    }
+
+    // now we can assume that the main block contains a sequence of stmts
+    val sequence = module.stmt.get.asInstanceOf[SequenceStmt]
+    val stmts = sequence.stmts
+
+    assert(stmts.head == ReadIntStmt("x"))
+    assert(stmts(1) == new AssignmentStmt(ArrayAssignment(VarExpression("array"), IntValue(0)), VarExpression("x")))
+
+  }
+  test("Testing the oberon ArrayAssignmentStmt02 code. This module has an array assignment in IF-THEN") {
+    val module = parseResource("stmts/ArrayAssignmentStmt02.oberon")
+
+    assert(module.name == "SimpleModule")
+
+    assert(module.stmt.isDefined)
+
+    // assert that the main block contains a sequence of statements
+    module.stmt.get match {
+      case SequenceStmt(stmts) => assert(stmts.length == 4)
+      case _ => fail("we are expecting four stmts in the main block")
+    }
+
+    // now we can assume that the main block contains a sequence of stmts
+    val sequence = module.stmt.get.asInstanceOf[SequenceStmt]
+    val stmts = sequence.stmts
+
+    assert(stmts.head == ReadIntStmt("x"))
+    assert(stmts(1) == ReadIntStmt("max"))
+
+    // the third stmt must be an IfElseStmt
+    stmts(2) match {
+      case IfElseStmt(cond, s1, s2) =>
+        assert(cond == GTExpression(VarExpression("x"),VarExpression("max")))
+		assert(s1 == new AssignmentStmt(ArrayAssignment(VarExpression("array"), IntValue(0)), VarExpression("x")))
+        assert(s2.isEmpty) // the else stmt is None
+      case _ => fail("expecting an if-then stmt")
+    }
+
+    assert(stmts(3) == WriteStmt(VarExpression("max")))
+  }
+
+  test("Testing the oberon stmt32 code. This module has some user types declarations") {
+    val module = parseResource("stmts/stmt32.oberon")
+
+    assert(module.name == "UserTypeModule")
+
+    assert(!module.stmt.isDefined)
+
+    assert(module.userTypes.size == 4)
+  }
+
+  test("Testing the oberon ArrayAssignmentStmt04 code. This module has two array assignments") {
+    val module = parseResource("stmts/ArrayAssignmentStmt04.oberon")
+
+    assert(module.name == "SimpleModule")
+
+    assert(module.stmt.isDefined)
+
+    // assert that the main block contains a sequence of statements
+    module.stmt.get match {
+      case SequenceStmt(stmts) => assert(stmts.length == 3)
+      case _ => fail("we are expecting four stmts in the main block")
+    }
+
+    // now we can assume that the main block contains a sequence of stmts
+    val sequence = module.stmt.get.asInstanceOf[SequenceStmt]
+    val stmts = sequence.stmts
+
+	  assert(stmts.head == new AssignmentStmt(ArrayAssignment(VarExpression("v"), IntValue(2)), IntValue(3)))
+	  assert(stmts(1) == AssignmentStmt(("sum"), AddExpression(IntValue(9),IntValue(2))))
+	  assert(stmts(2) == new AssignmentStmt(ArrayAssignment(VarExpression("v"), IntValue(2)), VarExpression("sum")))
+  }
+
+  test("Testing the oberon ArrayAssignmentStmt05 code. This module has an assignmet array with sum in the index") {
+    val module = parseResource("stmts/ArrayAssignmentStmt05.oberon")
+
+    assert(module.name == "SimpleModule")
+
+    assert(module.userTypes.length == 1)
+  }
+
+  test("Testing the oberon stmt33 code. This module has a record and array type declarations"){
+    val module = parseResource("stmts/stmt33.oberon")
+
+
+    assert(module.name == "UserTypeModule")
+    assert(module.userTypes.size == 3)
+  }
+
+  test("Testing the oberon recordAssignmentStmt01 code") {
+    val module = parseResource("stmts/recordAssignmentStmt01.oberon")
+
+    assert(module.name == "SimpleModule")
+
+    assert(module.stmt.isDefined)
+
+    assert(module.stmt.get == new AssignmentStmt(RecordAssignment(VarExpression("d1"), "day"), IntValue(5)))
+  }
+
+  test("Testing the oberon recordAssignmentStmt02 code") {
+    val module = parseResource("stmts/recordAssignmentStmt02.oberon")
+
+    assert(module.name == "SimpleModule")
+
+    assert(module.userTypes.length == 1)
+  }
+
+  test("Testing the oberon stmt34 code. This module has a record and array type declarations"){
+    val module = parseResource("stmts/stmt34.oberon")
+
+
+    assert(module.name == "UserTypeModule")
+
+    assert(!module.stmt.isDefined)
+
+    assert(module.userTypes.size == 5)
+
+    assert(module.userTypes(0).baseType == ArrayType(15, IntegerType))
+
+  }
+
+
+
+  test("Testing the oberon ExpressionNameParser1 code. This module tests if the parser can see expression name access"){
+    val module = parseResource("stmts/ExpressionNameParser1.oberon")
+    assert(module.name == "ExpressionNameModule")
+    assert(module.stmt.isDefined)
+
+    assert(module.stmt.get.asInstanceOf[WriteStmt].expression.isInstanceOf[FieldAccessExpression])
+
+    assert(module.stmt.get.asInstanceOf[WriteStmt].expression.asInstanceOf[FieldAccessExpression].exp.isInstanceOf[VarExpression])
+
+    assert(module.stmt.get.asInstanceOf[WriteStmt].expression.asInstanceOf[FieldAccessExpression].name.isInstanceOf[String])
+  }
+
+  test("Testing the oberon ExpressionNameParser2 code. This module tests if the parser can translate operations with expression name"){
+    val module = parseResource("stmts/ExpressionNameParser2.oberon")
+
+    assert(module.name == "ExpressionNameModule")
+
+    assert(module.stmt.isDefined)
+
+    assert(module.stmt.get.asInstanceOf[SequenceStmt].stmts.size == 2)
+
+    assert(module.stmt.get.asInstanceOf[SequenceStmt].stmts.head.asInstanceOf[AssignmentStmt].exp.asInstanceOf[AddExpression].right.isInstanceOf[FieldAccessExpression])
+
+    assert(module.stmt.get.asInstanceOf[SequenceStmt].stmts.head.asInstanceOf[AssignmentStmt].exp.asInstanceOf[AddExpression].left.asInstanceOf[IntValue].value == 1)
+
+
+  }
+
+  test("Testing the oberon ExpressionNameParser3 code. This module tests if the parser can see expression name with more than two words"){
+    val module = parseResource("stmts/ExpressionNameParser3.oberon")
+
+  	assert(module.name == "ExpressionNameModule")
+
+  	assert(module.stmt.isDefined)
+
+  	assert(module.stmt.get.asInstanceOf[WriteStmt].expression.isInstanceOf[FieldAccessExpression])
+
+    assert(module.stmt.get.asInstanceOf[WriteStmt].expression.asInstanceOf[FieldAccessExpression].exp.isInstanceOf[FieldAccessExpression])
+
+    assert(module.stmt.get.asInstanceOf[WriteStmt].expression.asInstanceOf[FieldAccessExpression].name.isInstanceOf[String])
+  }
+
+  test("Testing the oberon ExpressionNameParser4 code. This module tests if the parser can translate operations with two expression names"){
+    val module = parseResource("stmts/ExpressionNameParser4.oberon")
+
+    assert(module.name == "ExpressionNameModule")
+
+    assert(module.stmt.isDefined)
+
+    assert(module.stmt.get.asInstanceOf[SequenceStmt].stmts.size == 2)
+
+    assert(module.stmt.get.asInstanceOf[SequenceStmt].stmts.head.asInstanceOf[AssignmentStmt].exp.asInstanceOf[AddExpression].left.isInstanceOf[FieldAccessExpression])
+
+    assert(module.stmt.get.asInstanceOf[SequenceStmt].stmts.head.asInstanceOf[AssignmentStmt].exp.asInstanceOf[AddExpression].right.isInstanceOf[FieldAccessExpression])
+
+  }
+
+  test("Testing the oberon ExpressionNameParser5 code. This module tests if the parser can translate different operations with type record declarations"){
+    val module = parseResource("stmts/ExpressionNameParser5.oberon")
+
+    assert(module.name == "ExpressionNameModule")
+
+    assert(module.stmt.isDefined)
+
+    assert(module.stmt.get.asInstanceOf[SequenceStmt].stmts.size == 2)
+
+    assert(module.stmt.get.asInstanceOf[SequenceStmt].stmts.head.asInstanceOf[AssignmentStmt].exp.asInstanceOf[AddExpression].left.isInstanceOf[FieldAccessExpression])
+
+    assert(module.stmt.get.asInstanceOf[SequenceStmt].stmts.head.asInstanceOf[AssignmentStmt].exp.asInstanceOf[AddExpression].right.asInstanceOf[MultExpression].left.isInstanceOf[FieldAccessExpression])
+
+	  assert(module.stmt.get.asInstanceOf[SequenceStmt].stmts.head.asInstanceOf[AssignmentStmt].exp.asInstanceOf[AddExpression].right.asInstanceOf[MultExpression].right.isInstanceOf[FieldAccessExpression])
+
+
+  }
+
+  test("Testing the oberon userTypeSimple01 code module. This module has a record type declaration, with invalid declarations") {
+    val module = parseResource("simple/userTypeSimple01.oberon")
+
+    assert(module.name == "UserTypeModule")
+
+    assert(module.userTypes.length == 2)
+  }
+
+  test("Testing the oberon userTypeSimple02 code module. This module has array and record type declarations") {
+    val module = parseResource("simple/userTypeSimple02.oberon")
+    // val sequenceStmts = module.stmt.get.asInstanceOf[SequenceStmt].stmts
+
+    assert(module.name == "test")
+    assert(module.stmt.get.asInstanceOf[ReadIntStmt] == ReadIntStmt("x"))
+
+    assert(module.userTypes.length == 2)
+
+    val typeList = module.userTypes
+
+    val halls = RecordType(List(VariableDeclaration("integrante", BooleanType),
+      VariableDeclaration("matricula",IntegerType)))
+
+    val halls_array = ArrayType(9, ReferenceToUserDefinedType("HALLS"))
+
+    val typetoTest = List(halls, halls_array)
+
+    var it: Int = 0
+
+    typeList.foreach(t => {
+      assert(t.baseType == typetoTest(it))
+      it += 1
+    })
+
+  }
+
+  test("Testing the oberon userTypeSimple03 code module. This module has a record type declaration, with invalid declarations"){
+    val module = parseResource("simple/userTypeSimple03.oberon")
+
+    assert(module.name == "test")
+
+    assert(module.userTypes.length == 3)
+
+    val typeList = module.userTypes
+
+    val test_array = ArrayType(5, BooleanType)
+
+    val tipo1 = RecordType(List(
+      VariableDeclaration("num", IntegerType),
+      VariableDeclaration("numum", ReferenceToUserDefinedType("test_array"))))
+
+    val tipo2 =  RecordType(List(VariableDeclaration("num_record", ReferenceToUserDefinedType("tipo1"))))
+
+    val typetoTest = List(test_array, tipo1, tipo2)
+
+    var it: Int = 0
+
+    typeList.foreach(t => {
+      assert(t.baseType == typetoTest(it))
+      it += 1
+    })
+
+  }
+
+  ignore("Testing the oberon userTypeSimple04 code module. This module has an array and a record type declarations, with the array declaration using negative size (useful for typecheck tests)") {
+    val module = parseResource("simple/userTypeSimple04.oberon")
+
+    assert(module.name == "UserTypeModule")
+
+    assert(module.userTypes.length == 3)
+
+    val listDeclaration = List(VariableDeclaration("size", IntegerType),
+      VariableDeclaration("variables", ReferenceToUserDefinedType("cplusplus")), VariableDeclaration("Varinho",
+      ReferenceToUserDefinedType("myType")))
+
+
+    assert(module.userTypes(0).baseType == ArrayType(10, BooleanType))
+    assert(module.userTypes(1).baseType == RecordType(listDeclaration))
+    assert(module.userTypes(2).baseType == ArrayType(5, ReferenceToUserDefinedType("java")))
+  }
+
+  test("Testing the oberon userTypeSimple05 code module. This module has some user type declarations with a variables using theses types"){
+    val module = parseResource("simple/userTypeSimple05.oberon")
+
+    assert(module.name == "UserTypeModule")
+
+    assert(module.userTypes.length == 2)
+
+    assert(module.variables.length == 3)
+
+    val varList = List(VariableDeclaration("x", ReferenceToUserDefinedType("simple")),
+      VariableDeclaration("y", ReferenceToUserDefinedType("simple")),
+      VariableDeclaration("z", ReferenceToUserDefinedType("complicated")))
+
+    var it : Int = 0
+    module.variables.foreach(v => {
+      assert(v == varList(it))
+      it += 1
+    })
+  }
+
+  test("Testing the oberon userTypeSimple06 code module. This module has a record and array type declaration"){
+    val module = parseResource("simple/userTypeSimple06.oberon")
+
+    assert(module.name == "test_ando")
+
+    assert(module.userTypes.length == 3)
+
+    val typeList = module.userTypes
+
+    val cheesewithbread = ArrayType(10, IntegerType)
+
+    val cheesewithoutbread = RecordType(List(
+      VariableDeclaration("var1", IntegerType),
+      VariableDeclaration("var2", ReferenceToUserDefinedType("cheesewithbread"))))
+
+    val cheesewithhalfabread =  ArrayType(100000, ReferenceToUserDefinedType("cheesewithoutbread"))
+
+    val typetoTest = List(cheesewithbread, cheesewithoutbread, cheesewithhalfabread)
+
+    var it: Int = 0
+
+    typeList.foreach(t => {
+      assert(t.baseType == typetoTest(it))
+      it += 1
+    })
+
+  }
+
+  test("Testing the oberon userTypeSimple07 code module. This module has a procedure using a user defined type"){
+    val module = parseResource("simple/userTypeSimple07.oberon")
+
+    assert(module.name == "UserTypeModule")
+
+    assert(module.userTypes.length == 1)
+
+    assert(module.procedures.length == 1)
+
+    val userProcedure = module.procedures.head
+
+    assert(userProcedure.name == "initialize_array")
+    assert(userProcedure.args.length == 1)
+    assert(userProcedure.returnType.get.asInstanceOf[ReferenceToUserDefinedType] == ReferenceToUserDefinedType("simple"))
+    assert(userProcedure.variables.length == 1)
+    assert(userProcedure.stmt.asInstanceOf[SequenceStmt].stmts.length == 3)
+  }
+
+  test("Testing module B oberon import module feature. Import one module") {
+    val moduleB = parseResource("imports/B.oberon")
+
+    val expectedSet = Set("A")
+    assert(expectedSet == moduleB.submodules)
+  }
+
+  test("Testing module D oberon import module feature. Import two modules") {
+    val moduleD = parseResource("imports/D.oberon")
+
+    val expectedSet = Set("A","C")
+    assert(expectedSet == moduleD.submodules)
+  }
+
+  test("Testing module F oberon import module feature. Alias and module name") {
+    val moduleF = parseResource("imports/F.oberon")
+
+    val expectedSet = Set("A")
+    assert(expectedSet == moduleF.submodules)
+  }
+
+  test("Testing module H oberon import module feature. A := aliasA, C := aliasC, D"){
+    val moduleH = parseResource("imports/H.oberon")
+
+    val expectedSet = Set("A", "C", "D")
+    assert(expectedSet == moduleH.submodules)
+  }
+
+
+  test("Testing LoopStmt stmt on loop_stmt01 program") {
+    val path = Paths.get(getClass.getClassLoader.getResource("stmts/loop_stmt01.oberon").toURI)
+
+    assert(path != null)
+
+    val content = String.join("\n", Files.readAllLines(path))
+    val module = ScalaParser.parse(content)
+
+    assert(module.name == "LoopStmt")
+
+    assert(module.variables.size == 1)
+    assert(module.stmt.isDefined)
+  }
+
+  test("Testing LoopStmt stmt on loop_stmt02 program") {
+    val path = Paths.get(getClass.getClassLoader.getResource("stmts/loop_stmt02.oberon").toURI)
+
+    assert(path != null)
+
+    val content = String.join("\n", Files.readAllLines(path))
+    val module = ScalaParser.parse(content)
+
+    assert(module.name == "LoopStmt")
+
+    assert(module.variables.size == 2)
+    assert(module.stmt.isDefined)
+  }
+
+  test("Printing new types on console") {
+    val path = Paths.get(getClass.getClassLoader.getResource("aritmetic/aritmetic34.oberon").toURI)
+
+    assert(path != null)
+
+    val content = String.join("\n", Files.readAllLines(path))
+    val module = ScalaParser.parse(content)
+
+    assert(module.name == "SimpleModule")
+
+    val sequence = module.stmt.get.asInstanceOf[SequenceStmt]
+    val stmts = sequence.stmts
+    assert(stmts(5) == WriteStmt(VarExpression("v")))
+    assert(stmts(6) == WriteStmt(VarExpression("w")))
+    assert(stmts(7) == WriteStmt(VarExpression("x")))
+    assert(stmts(8) == WriteStmt(VarExpression("y")))
+    assert(stmts(9) == WriteStmt(VarExpression("z")))
+  }
+
+  test("Reading new types") {
+    val path = Paths.get(getClass.getClassLoader.getResource("aritmetic/aritmetic35.oberon").toURI)
+
+    assert(path != null)
+
+    val content = String.join("\n", Files.readAllLines(path))
+    val module = ScalaParser.parse(content)
+
+    assert(module.name == "SimpleModule")
+
+    val sequence = module.stmt.get.asInstanceOf[SequenceStmt]
+    val stmts = sequence.stmts
+    assert(stmts.head == ReadLongRealStmt("v"))
+    assert(stmts(1) == ReadRealStmt("w"))
+    assert(stmts(2) == ReadLongIntStmt("x"))
+    assert(stmts(3) == ReadIntStmt("y"))
+    assert(stmts(4) == ReadShortIntStmt("z"))
+  }
+
+  test("Testing the parser for simple expressions") {
+    val intValue1 = "1"
+    val sum = "x + 4"
+
+    val exp1 = ScalaParser.parserREPL(intValue1)
+    assert(exp1 == REPLExpression(IntValue(1)))
+
+    val exp2 = ScalaParser.parserREPL(sum)
+    assert(exp2 == REPLExpression(AddExpression(VarExpression("x"), IntValue(4))))
+  }
+
+  test("Testing the parser for addition expressions") {
+    val sum1 = "7 + 14"
+    val sum2 = "x + y"
+
+    val exp1 = ScalaParser.parserREPL(sum1)
+    assert(exp1 == REPLExpression(AddExpression(IntValue(7), IntValue(14))))
+
+    val exp2 = ScalaParser.parserREPL(sum2)
+    assert(exp2 == REPLExpression(AddExpression(VarExpression("x"), VarExpression("y"))))
+  }
+
+  test("Testing the parser for subtraction expressions") {
+    val sub1 = "21 - 5"
+    val sub2 = "x - y"
+
+    val exp1 = ScalaParser.parserREPL(sub1)
+    assert(exp1 == REPLExpression(SubExpression(IntValue(21), IntValue(5))))
+
+    val exp2 = ScalaParser.parserREPL(sub2)
+    assert(exp2 == REPLExpression(SubExpression(VarExpression("x"), VarExpression("y"))))
+  }
+
+  test("Testing the parser for multiplication expressions") {
+    val multi1 = "3 * 7"
+    val multi2 = "x * y"
+
+    val exp1 = ScalaParser.parserREPL(multi1)
+    assert(exp1 == REPLExpression(MultExpression(IntValue(3), IntValue(7))))
+
+    val exp2 = ScalaParser.parserREPL(multi2)
+    assert(exp2 == REPLExpression(MultExpression(VarExpression("x"), VarExpression("y"))))
+  }
+
+  test("Testing the parser for division expressions") {
+    val div1 = "500 / 7"
+    val div2 = "x / y"
+
+    val exp1 = ScalaParser.parserREPL(div1)
+    assert(exp1 == REPLExpression(DivExpression(IntValue(500), IntValue(7))))
+
+    val exp2 = ScalaParser.parserREPL(div2)
+    assert(exp2 == REPLExpression(DivExpression(VarExpression("x"), VarExpression("y"))))
+  }
+
+  test("Testing the parser for a boolean expression") {
+    val boolValue = "True"
+
+    val exp1 = ScalaParser.parserREPL(boolValue)
+    assert(exp1 == REPLExpression(BoolValue(true)))
+  }
+
+  test("Testing the parser for and operation expressions") {
+    val and1 = "True && False"
+    val and2 = "x && y"
+
+    val exp1 = ScalaParser.parserREPL(and1)
+    assert(exp1 == REPLExpression(AndExpression(BoolValue(true), BoolValue(false))))
+
+    val exp2 = ScalaParser.parserREPL(and2)
+    assert(exp2 == REPLExpression(AndExpression(VarExpression("x"), VarExpression("y"))))
+  }
+
+  test("Testing the parser for or operation expressions") {
+    val or1 = "True || True"
+    val or2 = "x || y"
+
+    val exp1 = ScalaParser.parserREPL(or1)
+    assert(exp1 == REPLExpression(OrExpression(BoolValue(true), BoolValue(true))))
+
+    val exp2 = ScalaParser.parserREPL(or2)
+    assert(exp2 == REPLExpression(OrExpression(VarExpression("x"), VarExpression("y"))))
+  }
+
+  test("Testing the parser for equal expressions") {
+    val eq1 = "1 = True"
+    val eq2 = "x = y"
+
+    val exp1 = ScalaParser.parserREPL(eq1)
+    assert(exp1 == REPLExpression(EQExpression(IntValue(1), BoolValue(true))))
+
+    val exp2 = ScalaParser.parserREPL(eq2)
+    assert(exp2 == REPLExpression(EQExpression(VarExpression("x"), VarExpression("y"))))
+  }
+
+  test("Testing the parser for logical bigger and lesser") {
+    val eq1 = "4 > 2";
+    val eq2 = "4 >= 4";
+    val eq3 = "4 < 5";
+    val eq4 = "5 <= 5";
+
+    val eq5 = "x > y";
+    val eq6 = "x < y";
+
+    val exp1 = ScalaParser.parserREPL(eq1)
+    assert(exp1 == REPLExpression(GTExpression(IntValue(4), IntValue(2))))
+
+    val exp2 = ScalaParser.parserREPL(eq2)
+    assert(exp2 == REPLExpression(GTEExpression(IntValue(4), IntValue(4))))
+
+    val exp3 = ScalaParser.parserREPL(eq3)
+    assert(exp3 == REPLExpression(LTExpression(IntValue(4), IntValue(5))))
+
+    val exp4 = ScalaParser.parserREPL(eq4)
+    assert(exp4 == REPLExpression(LTEExpression(IntValue(5), IntValue(5))))
+
+    val exp5 = ScalaParser.parserREPL(eq5)
+    assert(exp5 == REPLExpression(GTExpression(VarExpression("x"), VarExpression("y"))))
+
+    val exp6 = ScalaParser.parserREPL(eq6)
+    assert(exp6 == REPLExpression(LTExpression(VarExpression("x"), VarExpression("y"))))
+  }
+
+  test("Testing the parser for FunctionCallExpression expression") {
+    val procedure1 = "sum(x,y)"
+
+    val exp1 = ScalaParser.parserREPL(procedure1)
+    assert(exp1 == REPLExpression(FunctionCallExpression("sum",List(VarExpression("x"),VarExpression("y")))))
+  }
+
+  test("Testing the parser for assignment statements") {
+    val assign1 = "a := 2"
+    val assign2 = "b := 2 + 3"
+    val assign3 = "c := a + 3"
+
+    val stmt1 = ScalaParser.parserREPL(assign1)
+    assert(stmt1 == REPLStatement(AssignmentStmt("a", IntValue(2))))
+
+    val stmt2 = ScalaParser.parserREPL(assign2)
+    assert(stmt2 == REPLStatement(AssignmentStmt("b", AddExpression(IntValue(2),IntValue(3)))))
+
+    val stmt3 = ScalaParser.parserREPL(assign3)
+    assert(stmt3 == REPLStatement(AssignmentStmt("c", AddExpression(VarExpression("a"),IntValue(3)))))
+  }
+
+  test("Testing the parser for ReadIntStmt statements") {
+    val read1 = "readInt(x)"
+
+    val stmt1 = ScalaParser.parserREPL(read1)
+    assert(stmt1 == REPLStatement(ReadIntStmt("x")))
+  }
+
+  test("Testing the parser for WriteStmt statements") {
+    val write1 = "write(1)"
+    val write2 = "write(2 + a)"
+    val write3 = "write(sum(x,y))"
+
+    val stmt1 = ScalaParser.parserREPL(write1)
+    assert(stmt1 == REPLStatement(WriteStmt(IntValue(1))))
+
+    val stmt2 = ScalaParser.parserREPL(write2)
+    assert(stmt2 == REPLStatement(WriteStmt(AddExpression(IntValue(2),VarExpression("a")))))
+
+    val stmt3 = ScalaParser.parserREPL(write3)
+    assert(stmt3 == REPLStatement(WriteStmt(FunctionCallExpression("sum",List(VarExpression("x"),VarExpression("y"))))))
+  }
+
+  test("Testing the parser for IfElseStmt and IfElseIfStmt statements") {
+    val ifElse1 = "IF (x < 0 ) THEN y := 1 ELSE y := 3 END;"
+    val ifELse2 = "IF (x < 0 ) THEN y := 1 ELSIF (x > 0) THEN y := 2 ELSE y := 3 END;"
+
+    val stmt1 = ScalaParser.parserREPL(ifElse1)
+    assert(stmt1 == REPLStatement(IfElseStmt(LTExpression(VarExpression("x"),IntValue(0)),AssignmentStmt("y",IntValue(1)),Option(AssignmentStmt("y",IntValue(3))))))
+
+    val stmt2 = ScalaParser.parserREPL(ifELse2)
+    assert(stmt2 == REPLStatement(IfElseIfStmt(LTExpression(VarExpression("x"),IntValue(0)),AssignmentStmt("y",IntValue(1)),List(ElseIfStmt(GTExpression(VarExpression("x"),IntValue(0)),AssignmentStmt("y",IntValue(2)))),Option(AssignmentStmt("y",IntValue(3))))))
+  }
+
+  test("Testing the parser for WhileStmt statements") {
+    val while1 = "WHILE (x >= 0) DO x := x - 1 END;"
+
+    val stmt1 = ScalaParser.parserREPL(while1)
+    assert(stmt1 == REPLStatement(WhileStmt(GTEExpression(VarExpression("x"),IntValue(0)),AssignmentStmt("x",SubExpression(VarExpression("x"),IntValue(1))))))
+  }
+
+  test("Testing the parser for ReaptUntilStmt statements") {
+    val repeat1 = "REPEAT x := x + 1 UNTIL x > 2"
+
+    val stmt1 = ScalaParser.parserREPL(repeat1)
+    assert(stmt1 == REPLStatement(RepeatUntilStmt(GTExpression(VarExpression("x"),IntValue(2)),AssignmentStmt("x",AddExpression(VarExpression("x"),IntValue(1))))))
+  }
+
+  test("Testing the parser for ForStmt statements") {
+    val for1 = "FOR x IN 0 .. 10 DO write(x) END"
+
+    val stmt1 = ScalaParser.parserREPL(for1)
+    assert(stmt1 == REPLStatement(ForStmt(AssignmentStmt("x",IntValue(0)),LTEExpression(VarExpression("x"),IntValue(10)),SequenceStmt(List(WriteStmt(VarExpression("x")), AssignmentStmt("x",AddExpression(VarExpression("x"),IntValue(1))))))))
+  }
+
+  test("Testing the parser for CaseStmt statements") {
+    val case1 = "CASE x OF 0: y := 1 ELSE y := 0 END"
+
+    val stmt1 = ScalaParser.parserREPL(case1)
+    assert(stmt1 == REPLStatement(CaseStmt(VarExpression("x"),List(SimpleCase(IntValue(0),AssignmentStmt("y",IntValue(1)))),Some(AssignmentStmt("y",IntValue(0))))))
+  }
+
+  test("Testing the parser for VarDeclaration") {
+    val var1 = "x: INTEGER;"
+    val var2 = "x: BOOLEAN;"
+    val var3 = "x, y: INTEGER;"
+
+    val variable1 = ScalaParser.parserREPL(var1)
+    assert(variable1 == REPLVarDeclaration(List(VariableDeclaration("x",IntegerType))))
+
+    val variable2 = ScalaParser.parserREPL(var2)
+    assert(variable2 == REPLVarDeclaration(List(VariableDeclaration("x",BooleanType))))
+
+    val variable3= ScalaParser.parserREPL(var3)
+    assert(variable3 == REPLVarDeclaration(List(VariableDeclaration("x",IntegerType),VariableDeclaration("y",IntegerType))))
+  }
+
+  test("Testing the parser for Constant declaration") {
+    val const1 = "x = 0;"
+    val const2 = "y = x + 1;"
+
+    val constant1 = ScalaParser.parserREPL(const1)
+    assert(constant1 == REPLConstant(Constant("x",IntValue(0))))
+
+    val constant2 = ScalaParser.parserREPL(const2)
+    assert(constant2 == REPLConstant(Constant("y",AddExpression(VarExpression("x"),IntValue(1)))))
+  }
+//Testing the oberon pointerDecl1 code
+  test("Testing the oberon pointerDecl1 code") {
+    val module = parseResource("Pointers/pointerDecl1.oberon")
+
+    assert(module.variables.size == 5)
+    assert(module.variables.head == VariableDeclaration("a", PointerType(IntegerType)))
+    assert(module.variables(1) == VariableDeclaration("b", PointerType(RealType)))
+    assert(module.variables(2) == VariableDeclaration("c", PointerType(CharacterType)))
+    assert(module.variables(3) == VariableDeclaration("d", PointerType(BooleanType)))
+    assert(module.variables(4) == VariableDeclaration("e", PointerType(StringType)))
+  }
+
+  test("Testing the oberon pointerDecl2 code") {
+    val module = parseResource("Pointers/pointerDecl2.oberon")
+
+    assert(module.variables.size == 2)
+    assert(module.variables.head == VariableDeclaration("a", PointerType(ReferenceToUserDefinedType("aluno"))))
+    assert(module.variables(1) == VariableDeclaration("b", PointerType(ReferenceToUserDefinedType("notas"))))
+
+  }
+
+  //Testing the oberon pointerAssign1 code
+  test("Testing the oberon pointerAssign1 code") {
+    val module = parseResource("Pointers/pointerAssign1.oberon")
+
+    //test if there are 5 statements in stmts list
+    module.stmt.getOrElse(None) match {
+      case SequenceStmt(stmt) => assert(stmt.length == 5)
+      case _ => fail("This module should have 5 statements!")
+    }
+
+    val epsilon = 1e-2f
+    implicit val doubleEq = TolerantNumerics.tolerantDoubleEquality(epsilon)
+
+    val sequence = module.stmt.get.asInstanceOf[SequenceStmt]
+    val stmts = sequence.stmts
+    assert(stmts.head == new AssignmentStmt(PointerAssignment("a"), IntValue(1)))
+    assert(stmts(1) === new AssignmentStmt(PointerAssignment("b"), RealValue(9.5)))
+    assert(stmts(2) == new AssignmentStmt(PointerAssignment("c"), CharValue('c')))
+    assert(stmts(3) == new AssignmentStmt(PointerAssignment("d"), BoolValue(true)))
+    assert(stmts(4) == new AssignmentStmt(PointerAssignment("e"), StringValue("Hello.")))
+  }
+
+
+  test("Testing the oberon pointerAssign2 code"){
+    val module = parseResource("Pointers/pointerAssign2.oberon")
+
+    //conferir a contagem de statement
+    module.stmt.getOrElse(None) match {
+      case SequenceStmt(stmt) => assert(stmt.length == 4)
+      case _ => fail("This module should have 4 statements!")
+    }
+
+    // 2 ou 4 conferir. tentativa: 1 record, 1 array, 2 pointer
+    assert(module.userTypes.size == 2)
+
+    val sequence = module.stmt.get.asInstanceOf[SequenceStmt]
+    val stmts = sequence.stmts
+    assert(stmts.head  == new AssignmentStmt(RecordAssignment(VarExpression("a"), "nome"), StringValue("Manuela")))
+    assert(stmts(1) == new AssignmentStmt(RecordAssignment(VarExpression("a"), "idade"), IntValue(23)))
+    assert(stmts(2) == new AssignmentStmt(ArrayAssignment(PointerAccessExpression("b"), IntValue(0)),RealValue(9.5)))
+    assert(stmts(3) == new AssignmentStmt(ArrayAssignment(PointerAccessExpression("b"), IntValue(2)),RealValue(9.0)))
+  }
+
+  test("Testing the oberon pointerAssign3 code"){
+    val module = parseResource("Pointers/pointerAssigner3.oberon")
+
+    assert(module.variables.size == 3)
+    assert(module.variables.head == VariableDeclaration("a", PointerType(RealType)))
+    assert(module.variables(1) == VariableDeclaration("b", PointerType(ReferenceToUserDefinedType("pointerA"))))
+    assert(module.variables(2) == VariableDeclaration("c", PointerType(PointerType(IntegerType))))
+
+    //conferir a contagem de statement
+    module.stmt.getOrElse(None) match {
+      case SequenceStmt(stmt) => assert(stmt.length == 2)
+      case _ => fail("This module should have 2 statements!")
+    }
+
+    //verificar com o grupo numeros
+    assert(module.userTypes.size == 1)
+
+    val sequence = module.stmt.get.asInstanceOf[SequenceStmt]
+    val stmts = sequence.stmts
+    //opção IDE de convert to block expression - real value
+    assert(stmts.head  == new AssignmentStmt(PointerAssignment("a"), RealValue(10.5)))
+    assert(stmts(1)  == new AssignmentStmt(PointerAssignment("b"), VarExpression("a")))
+  }
+
+  test(testName = "Testing the oberon pointerOps1 code"){
+    val module = parseResource("Pointers/pointerOps1.oberon")
+
+    val sequence = module.stmt.get.asInstanceOf[SequenceStmt]
+    val stmts = sequence.stmts
+
+    assert(stmts(2) == AssignmentStmt("c",MultExpression(AddExpression(PointerAccessExpression("a"),PointerAccessExpression("b")),SubExpression(PointerAccessExpression("b"),PointerAccessExpression("a")))))
+  }
+
+
+  test(testName = "Testing the oberon LinkedList code"){
+    val module = parseResource("Pointers/linkedList.oberon")
+    val sequence = module.stmt.get.asInstanceOf[SequenceStmt]
+    val stmts = sequence.stmts
+
+    assert(module.userTypes.size == 1)
+    assert(module.userTypes(0) == UserDefinedType("linkedList", RecordType(List(VariableDeclaration("value", IntegerType), VariableDeclaration("next", PointerType(ReferenceToUserDefinedType("linkedList")))))))
+    assert(module.variables(0) == VariableDeclaration("list", ReferenceToUserDefinedType("linkedList")))
+
+    assert(stmts.head == new AssignmentStmt(RecordAssignment(VarExpression("list"), "value"), IntValue(10)))
+    assert(stmts(1) == new AssignmentStmt(RecordAssignment(VarExpression("list"), "next"), NullValue))
+  }
+
+  test(testName = "Testing the module ForEachStmt"){
+    val module = parseResource("stmts/ForEachStmt.oberon")
+    assert(module.name == "ForEachStmt")
+
+    assert(module.stmt.isDefined)
+
+    module.stmt.get match {
+      case SequenceStmt(stmts) =>
+        assert(stmts.length == 6)
+        assert(stmts(4).isInstanceOf[ForEachStmt])
+        val forEach = stmts(4).asInstanceOf[ForEachStmt]
+
+        assert(forEach.varName == "v")
+    }
+  }
+
 
 }
